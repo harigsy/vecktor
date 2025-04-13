@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vector Style Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #1e1e1e;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body>
+
+<script>
+  const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 400,
+    physics: {
+      default: 'arcade',
+      arcade: {
+        gravity: { y: 600 },
+        debug: false
+      }
+    },
+    scene: {
+      preload,
+      create,
+      update
+    }
+  };
+
+  const game = new Phaser.Game(config);
+
+  let player, cursors, platforms, obstacles;
+  let leftBtn, rightBtn, jumpBtn;
+  let moveLeft = false, moveRight = false, doJump = false;
+
+  function preload() {
+    // Background and game assets
+    this.load.image('background', 'https://labs.phaser.io/assets/skies/city.png');
+    this.load.image('ground', 'https://labs.phaser.io/assets/sprites/platform.png');
+    this.load.spritesheet('dude',
+      'https://labs.phaser.io/assets/sprites/dude.png',
+      { frameWidth: 32, frameHeight: 48 }
+    );
+    this.load.image('arrow', 'https://cdn-icons-png.flaticon.com/512/271/271220.png');
+    this.load.image('jump', 'https://cdn-icons-png.flaticon.com/512/32/32195.png');
+    this.load.image('spike', 'https://upload.wikimedia.org/wikipedia/commons/e/ec/Red_triangle_3D.svg'); // Obstacle (spike)
+  }
+
+  function create() {
+    // Add background
+    this.add.image(400, 200, 'background').setScrollFactor(0).setDepth(-1);
+
+    // Platforms
+    platforms = this.physics.add.staticGroup();
+    platforms.create(400, 380, 'ground').setScale(2).refreshBody();
+
+    // Player
+    player = this.physics.add.sprite(100, 300, 'dude');
+    player.setBounce(0.1);
+    player.setCollideWorldBounds(true);
+    this.physics.add.collider(player, platforms);
+
+    // Animations
+    this.anims.create({
+      key: 'left',
+      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'turn',
+      frames: [{ key: 'dude', frame: 4 }],
+      frameRate: 20
+    });
+    this.anims.create({
+      key: 'right',
+      frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
+      frameRate: 10,
+      repeat: -1
+    });
+
+    // Create obstacles (spikes)
+    obstacles = this.physics.add.group({
+      key: 'spike',
+      repeat: 2,
+      setXY: { x: 400, y: 300, stepX: 200 }
+    });
+    obstacles.children.iterate(function (obstacle) {
+      obstacle.setScale(0.5);
+      obstacle.setBounce(0.2);
+      obstacle.setCollideWorldBounds(true);
+    });
+
+    // Input controls
+    cursors = this.input.keyboard.createCursorKeys();
+
+    // Touch controls
+    leftBtn = this.add.image(60, 340, 'arrow').setInteractive().setScale(0.2).setScrollFactor(0).setRotation(Math.PI);
+    rightBtn = this.add.image(140, 340, 'arrow').setInteractive().setScale(0.2);
+    jumpBtn = this.add.image(740, 340, 'jump').setInteractive().setScale(0.2);
+
+    leftBtn.on('pointerdown', () => moveLeft = true);
+    leftBtn.on('pointerup', () => moveLeft = false);
+    rightBtn.on('pointerdown', () => moveRight = true);
+    rightBtn.on('pointerup', () => moveRight = false);
+    jumpBtn.on('pointerdown', () => doJump = true);
+    jumpBtn.on('pointerup', () => doJump = false);
+  }
+
+  function update() {
+    let moving = false;
+
+    // Left and right movement
+    if (cursors.left.isDown || moveLeft) {
+      player.setVelocityX(-160);
+      player.anims.play('left', true);
+      moving = true;
+    }
+
+    if (cursors.right.isDown || moveRight) {
+      player.setVelocityX(160);
+      player.anims.play('right', true);
+      moving = true;
+    }
+
+    if (!moving) {
+      player.setVelocityX(0);
+      player.anims.play('turn');
+    }
+
+    // Jumping
+    if ((cursors.up.isDown || doJump) && player.body.blocked.down) {
+      player.setVelocityY(-400);
+    }
+
+    // Collision between player and obstacles (spikes)
+    this.physics.add.collider(player, obstacles, hitObstacle, null, this);
+  }
+
+  function hitObstacle(player, obstacle) {
+    player.setTint(0xff0000);  // Change player color to red on collision
+    player.anims.play('turn');  // Stop player animation
+    player.setVelocity(0, 0);   // Stop player movement
+    // Optionally, you can reset the game here or create a death effect
+    setTimeout(() => player.clearTint(), 500);  // Reset tint after 0.5s
+  }
+</script>
+
+</body>
+</html>
