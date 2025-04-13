@@ -41,6 +41,7 @@
   let player, cursors, platforms, obstacles;
   let leftBtn, rightBtn, jumpBtn;
   let moveLeft = false, moveRight = false, doJump = false;
+  let gameOver = false;
 
   function preload() {
     // Background and game assets
@@ -67,7 +68,7 @@
     player = this.physics.add.sprite(100, 300, 'dude');
     player.setBounce(0.1);
     player.setCollideWorldBounds(true);
-    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(player, platforms);  // Collision between player and platform
 
     // Animations
     this.anims.create({
@@ -98,7 +99,9 @@
       obstacle.setScale(0.5);
       obstacle.setBounce(0.2);
       obstacle.setCollideWorldBounds(true);
-    });
+      obstacle.setVelocityX(100);  // Move obstacles left and right
+      this.physics.add.collider(obstacle, platforms); // Obstacle collision with platform
+    }, this);
 
     // Input controls
     cursors = this.input.keyboard.createCursorKeys();
@@ -117,6 +120,10 @@
   }
 
   function update() {
+    if (gameOver) {
+      return; // Game Over, don't process anything
+    }
+
     let moving = false;
 
     // Left and right movement
@@ -144,14 +151,40 @@
 
     // Collision between player and obstacles (spikes)
     this.physics.add.collider(player, obstacles, hitObstacle, null, this);
+
+    // Move obstacles left and right
+    obstacles.children.iterate(function (obstacle) {
+      if (obstacle.body.velocity.x > 0 && obstacle.x >= 700) {
+        obstacle.setVelocityX(-100); // Reverse direction
+      }
+      else if (obstacle.body.velocity.x < 0 && obstacle.x <= 100) {
+        obstacle.setVelocityX(100); // Reverse direction
+      }
+    });
   }
 
   function hitObstacle(player, obstacle) {
+    gameOver = true; // Stop the game
     player.setTint(0xff0000);  // Change player color to red on collision
     player.anims.play('turn');  // Stop player animation
     player.setVelocity(0, 0);   // Stop player movement
-    // Optionally, you can reset the game here or create a death effect
-    setTimeout(() => player.clearTint(), 500);  // Reset tint after 0.5s
+
+    // Optionally, show a "Game Over" message
+    this.add.text(300, 150, 'Game Over!', { font: '32px Arial', fill: '#fff' });
+
+    // Restart the game after 3 seconds
+    setTimeout(() => {
+      restartGame(); // Restart the game
+    }, 3000); // Wait 3 seconds before restarting
+  }
+
+  function restartGame() {
+    // Reset player position and velocity
+    player.setPosition(100, 300);  // Reset player position
+    player.clearTint(); // Reset player color
+    player.setVelocity(0, 0); // Reset velocity
+    gameOver = false; // Allow the game to restart
+    this.add.text(300, 150, 'Game Restarting...', { font: '32px Arial', fill: '#fff' });
   }
 </script>
 
